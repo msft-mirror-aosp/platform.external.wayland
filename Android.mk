@@ -106,6 +106,12 @@ $(GEN) : $(LOCAL_PATH)/src/%-client-protocol.h : $(LOCAL_PATH)/protocol/%.xml
 	$(transform-generated-source)
 # Note: The line above must be indented with tabs.
 
+# Ensure we generate the headers before they are used by any clients of the
+# library.
+# TODO(lpique): Introduce and upstream a LOCAL_EXPORT_C_GEN_INCLUDES setting
+# which adds this in build/core/binary.mk, to avoid relying on build internals.
+$(call local-intermediates-dir)/export_includes : $(GEN)
+
 # --- Generate wayland-version.h from wayland-version.h.in
 # We must put the output where the users of the library can see it.
 GEN := $(addprefix $(LOCAL_PATH)/src/, \
@@ -117,5 +123,11 @@ $(GEN) : PRIVATE_CUSTOM_TOOL = sed $(WAYLAND_TEMPLATE_SUBST) < $< > $@
 $(GEN) : $(LOCAL_PATH)/src/%.h : $(LOCAL_PATH)/src/%.h.in
 	$(transform-generated-source)
 # Note: The line above must be indented with tabs.
+
+# Ensure we generate the headers before they are used by any clients of the
+# library.
+# TODO(lpique): Introduce and upstream a LOCAL_EXPORT_C_GEN_INCLUDES setting
+# which adds this in build/core/binary.mk, to avoid relying on build internals.
+$(call local-intermediates-dir)/export_includes : $(GEN)
 
 include $(BUILD_STATIC_LIBRARY)
