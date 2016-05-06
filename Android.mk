@@ -63,7 +63,7 @@ LOCAL_SRC_FILES := \
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/src \
-	device/google/cheets/external/cheets-libffi/$(TARGET_OS)-$(TARGET_ARCH) \
+	device/google/cheets2/external/cheets-libffi/$(TARGET_OS)-$(TARGET_ARCH) \
 
 LOCAL_STATIC_LIBRARIES := \
 	cheets-libffi \
@@ -78,7 +78,7 @@ LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/src
 # These files are generated, and we must make them a dependency to ensure they
 # are generated before we try to include them.
 LOCAL_ADDITIONAL_DEPENDENCIES += \
-	device/google/cheets/external/cheets-libffi/include/ffi.h \
+	device/google/cheets2/external/cheets-libffi/include/ffi.h \
 
 # --- Generate the client protocol implementation data
 generated_sources := $(call local-generated-sources-dir)
