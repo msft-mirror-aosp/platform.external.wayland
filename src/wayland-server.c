@@ -730,6 +730,11 @@ registry_bind(struct wl_client *client,
 		wl_resource_post_error(resource,
 				       WL_DISPLAY_ERROR_INVALID_OBJECT,
 				       "invalid global %s (%d)", interface, name);
+	else if (version == 0)
+		wl_resource_post_error(resource,
+				       WL_DISPLAY_ERROR_INVALID_OBJECT,
+				       "invalid version for global %s (%d): 0 is not a valid version",
+				       interface, name);
 	else if (global->version < version)
 		wl_resource_post_error(resource,
 				       WL_DISPLAY_ERROR_INVALID_OBJECT,
@@ -1268,16 +1273,17 @@ wl_display_add_socket_fd(struct wl_display *display, int sock_fd)
 	if (s == NULL)
 		return -1;
 
-	/* Reuse the existing fd */
-	s->fd = sock_fd;
-
-	s->source = wl_event_loop_add_fd(display->loop, s->fd,
+	s->source = wl_event_loop_add_fd(display->loop, sock_fd,
 					 WL_EVENT_READABLE,
 					 socket_data, display);
 	if (s->source == NULL) {
 		wl_log("failed to establish event source\n");
+		wl_socket_destroy(s);
 		return -1;
 	}
+
+	/* Reuse the existing fd */
+	s->fd = sock_fd;
 
 	wl_list_insert(display->socket_list.prev, &s->link);
 
@@ -1302,7 +1308,7 @@ wl_display_add_socket_fd(struct wl_display *display, int sock_fd)
  * fails and returns -1.
  *
  * The length of socket path, i.e., the path set in XDG_RUNTIME_DIR and the
- * socket name, must not exceed the maxium length of a Unix socket path.
+ * socket name, must not exceed the maximum length of a Unix socket path.
  * The function also fails if the user do not have write permission in the
  * XDG_RUNTIME_DIR path or if the socket name is already in use.
  *
