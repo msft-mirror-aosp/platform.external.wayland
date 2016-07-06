@@ -45,6 +45,11 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_CFLAGS += $(WAYLAND_CFLAGS)
 
+# These files are generated, and we must make them a dependency to ensure they
+# are generated before we try to include them.
+LOCAL_ADDITIONAL_DEPENDENCIES += \
+	device/google/cheets2/external/wayland/src/wayland-version.h \
+
 LOCAL_MODULE := wayland_scanner
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_HOST_EXECUTABLE)
