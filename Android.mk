@@ -17,17 +17,6 @@ LOCAL_PATH := $(call my-dir)
 WAYLAND_CFLAGS := -Wall -Wextra -Wno-unused-parameter -g -Wstrict-prototypes
 WAYLAND_CFLAGS += -Wmissing-prototypes -fvisibility=hidden -Wno-pointer-arith
 
-WAYLAND_VERSION_MAJOR := 1
-WAYLAND_VERSION_MINOR := 9
-WAYLAND_VERSION_MICRO := 91
-WAYLAND_VERSION := "1.9.91"
-
-WAYLAND_TEMPLATE_SUBST := -e s/@WAYLAND_VERSION_MAJOR@/$(WAYLAND_VERSION_MAJOR)/
-WAYLAND_TEMPLATE_SUBST += -e s/@WAYLAND_VERSION_MINOR@/$(WAYLAND_VERSION_MINOR)/
-WAYLAND_TEMPLATE_SUBST += -e s/@WAYLAND_VERSION_MICRO@/$(WAYLAND_VERSION_MICRO)/
-WAYLAND_TEMPLATE_SUBST += -e s/@WAYLAND_VERSION@/$(WAYLAND_VERSION)/
-
-
 ###############################################################################
 # Build wayland_scanner, used to generate code
 
@@ -118,14 +107,25 @@ $(GEN) : $(LOCAL_PATH)/src/%-client-protocol.h : $(LOCAL_PATH)/protocol/%.xml
 $(call local-intermediates-dir)/export_includes : $(GEN)
 
 # --- Generate wayland-version.h from wayland-version.h.in
+# This process does some simple text substitution based on values defined in configure.ac
 # We must put the output where the users of the library can see it.
 GEN := $(addprefix $(LOCAL_PATH)/src/, \
 						wayland-version.h \
 				)
 LOCAL_ADDITIONAL_DEPENDENCIES += $(GEN)
 $(GEN) : PRIVATE_PATH := $(LOCAL_PATH)
-$(GEN) : PRIVATE_CUSTOM_TOOL = sed $(WAYLAND_TEMPLATE_SUBST) < $< > $@
-$(GEN) : $(LOCAL_PATH)/src/%.h : $(LOCAL_PATH)/src/%.h.in
+$(GEN) : PRIVATE_CUSTOM_TOOL = \
+			export WAYLAND_VERSION_MAJOR=$$(grep -o -E 'define..wayland_major_version.+' $(PRIVATE_PATH)/configure.ac | grep -o -E '[0-9]+') ; \
+			export WAYLAND_VERSION_MINOR=$$(grep -o -E 'define..wayland_minor_version.+' $(PRIVATE_PATH)/configure.ac | grep -o -E '[0-9]+') ; \
+			export WAYLAND_VERSION_MICRO=$$(grep -o -E 'define..wayland_micro_version.+' $(PRIVATE_PATH)/configure.ac | grep -o -E '[0-9]+') ; \
+			export WAYLAND_VERSION="$${WAYLAND_VERSION_MAJOR}.$${WAYLAND_VERSION_MINOR}.$${WAYLAND_VERSION_MICRO}" ; \
+			sed \
+				-e s/@WAYLAND_VERSION_MAJOR@/$${WAYLAND_VERSION_MAJOR}/ \
+				-e s/@WAYLAND_VERSION_MINOR@/$${WAYLAND_VERSION_MINOR}/ \
+				-e s/@WAYLAND_VERSION_MICRO@/$${WAYLAND_VERSION_MICRO}/ \
+				-e s/@WAYLAND_VERSION_MICRO@/$${WAYLAND_VERSION_MICRO}/ \
+				-e s/@WAYLAND_VERSION@/$${WAYLAND_VERSION}/ < $< > $@
+$(GEN) : $(LOCAL_PATH)/src/%.h : $(LOCAL_PATH)/src/%.h.in | $(LOCAL_PATH)/configure.ac
 	$(transform-generated-source)
 # Note: The line above must be indented with tabs.
 
