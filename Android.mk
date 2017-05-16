@@ -74,6 +74,10 @@ LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/src
 LOCAL_ADDITIONAL_DEPENDENCIES += \
 	device/google/cheets2/external/cheets-libffi/include/ffi.h \
 
+# Export a list of all included protocols for convenience.
+ALL_MODULES.$(LOCAL_MODULE).PROTOCOLS := \
+	$(LOCAL_PATH)/protocol/wayland.xml \
+
 # --- Generate the client protocol implementation data
 generated_sources := $(call local-generated-sources-dir)
 GEN := $(addprefix $(generated_sources)/, \
