@@ -4,12 +4,12 @@
 
 http://cgit.freedesktop.org/wayland/wayland/
 
-## Files added for use in cheets:
+## Files added for use in Android:
 
 - `./Android.mk`
-- `./MODULE_LICENSE_MIT`
-- `./NOTICE (copy of ./COPYING)`
-- `./README.cheets.md`
+- `./METADATA`
+- `./LICENSE (copy of ./COPYING)`
+- `./README.android.md`
 - `./config.h`
 - `.gitignore`
 

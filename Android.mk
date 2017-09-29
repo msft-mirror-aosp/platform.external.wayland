@@ -37,7 +37,7 @@ LOCAL_CFLAGS += $(WAYLAND_CFLAGS)
 # These files are generated, and we must make them a dependency to ensure they
 # are generated before we try to include them.
 LOCAL_ADDITIONAL_DEPENDENCIES += \
-	device/google/cheets2/external/wayland/src/wayland-version.h \
+	src/wayland-version.h \
 
 LOCAL_MODULE := wayland_scanner
 LOCAL_MODULE_TAGS := optional
@@ -57,10 +57,9 @@ LOCAL_SRC_FILES := \
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/src \
-	device/google/cheets2/external/cheets-libffi/$(TARGET_OS)-$(TARGET_ARCH) \
 
 LOCAL_STATIC_LIBRARIES := \
-	cheets-libffi \
+	libffi \
 
 LOCAL_CFLAGS += $(WAYLAND_CFLAGS)
 
@@ -68,11 +67,6 @@ LOCAL_MODULE := libwayland_client
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/src
-
-# These files are generated, and we must make them a dependency to ensure they
-# are generated before we try to include them.
-LOCAL_ADDITIONAL_DEPENDENCIES += \
-	device/google/cheets2/external/cheets-libffi/include/ffi.h \
 
 # Export a list of all included protocols for convenience.
 ALL_MODULES.$(LOCAL_MODULE).PROTOCOLS := \
