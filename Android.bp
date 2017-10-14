@@ -88,5 +88,5 @@ cc_library_static {
     local_include_dirs: ["src"],
     generated_headers: ["wayland_version_header", "wayland_protocol_headers"],
     export_include_dirs: ["src"],
-    export_generated_headers: ["wayland_version_header"],
+    export_generated_headers: ["wayland_version_header", "wayland_protocol_headers"],
 }
