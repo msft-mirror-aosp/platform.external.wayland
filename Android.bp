@@ -41,6 +41,7 @@ cc_binary_host {
     name: "wayland_scanner",
     defaults: ["wayland_defaults"],
     srcs: ["src/scanner.c", "src/wayland-util.c"],
+    cflags: ["-Wall", "-Werror"],
     static_libs: ["libexpat"],
     generated_headers: ["wayland_version_header"],
 }
@@ -83,6 +84,7 @@ cc_library_static {
        "src/wayland-os.c",
        "src/wayland-util.c",
     ],
+    cflags: ["-Wall", "-Werror"],
     generated_sources: ["wayland_protocol_sources"],
     static_libs: ["libffi"],
     local_include_dirs: ["src"],
