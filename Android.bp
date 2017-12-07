@@ -27,6 +27,13 @@ cc_defaults {
     ],
 }
 
+filegroup {
+    name: "wayland_core_protocol",
+    srcs: [
+        "protocol/wayland.xml",
+    ],
+}
+
 // Generate wayland-version.h
 genrule {
     name: "wayland_version_header",
@@ -46,30 +53,20 @@ cc_binary_host {
     generated_headers: ["wayland_version_header"],
 }
 
-// Copy XML protocols to generated source folders
-wayland_protocol = ["protocol/wayland.xml"]
+// Generate protocol source files used by both client and server
 genrule {
-    name: "wayland_protocols",
-    cmd: "cp $(in) $(genDir)",
-    srcs: wayland_protocol,
-    out: ["wayland.xml"],
-    tool_files: ["."],
-}
-
-// Generate protocol source files
-genrule {
-    name: "wayland_protocol_sources",
+    name: "wayland_core_protocol_sources",
     cmd: "$(location wayland_scanner) code < $(in) > $(out)",
-    srcs: [":wayland_protocols"],
+    srcs: [":wayland_core_protocol"],
     out: ["wayland-protocol.c"],
     tools: ["wayland_scanner"],
 }
 
-// Generate protocol header files
+// Generate protocol header files used by the client
 genrule {
-    name: "wayland_protocol_headers",
+    name: "wayland_core_client_protocol_headers",
     cmd: "$(location wayland_scanner) client-header < $(in) > $(out)",
-    srcs: [":wayland_protocols"],
+    srcs: [":wayland_core_protocol"],
     out: ["wayland-client-protocol.h"],
     tools: ["wayland_scanner"],
 }
@@ -85,10 +82,16 @@ cc_library_static {
        "src/wayland-util.c",
     ],
     cflags: ["-Wall", "-Werror"],
-    generated_sources: ["wayland_protocol_sources"],
+    generated_sources: ["wayland_core_protocol_sources"],
     static_libs: ["libffi"],
     local_include_dirs: ["src"],
-    generated_headers: ["wayland_version_header", "wayland_protocol_headers"],
+    generated_headers: [
+        "wayland_version_header",
+        "wayland_core_client_protocol_headers"
+    ],
     export_include_dirs: ["src"],
-    export_generated_headers: ["wayland_version_header", "wayland_protocol_headers"],
+    export_generated_headers: [
+        "wayland_version_header",
+        "wayland_core_client_protocol_headers"
+    ],
 }
