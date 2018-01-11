@@ -18,12 +18,13 @@ cc_defaults {
     cflags: [
         "-Wall",
         "-Wextra",
-        "-Wno-unused-parameter",
         "-g",
         "-Wstrict-prototypes",
         "-Wmissing-prototypes",
         "-fvisibility=hidden",
+        "-Wno-cast-qual",
         "-Wno-pointer-arith",
+        "-Wno-unused-parameter",
     ],
 }
 
