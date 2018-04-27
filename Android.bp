@@ -75,6 +75,7 @@ genrule {
 // Build wayland_client
 cc_library_static {
     name: "libwayland_client",
+    vendor_available: true,
     defaults: ["wayland_defaults"],
     srcs: [
        "src/connection.c",
