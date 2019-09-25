@@ -1755,6 +1755,14 @@ free_protocol(struct protocol *protocol)
 	free_description(protocol->description);
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+// TODO(b/141619956): stop leaks
+const char *__asan_default_options() {
+    return "detect_leaks=0";
+}
+#pragma clang diagnostic pop
+
 int main(int argc, char *argv[])
 {
 	struct parse_context ctx;
