@@ -24,11 +24,9 @@ publican_sources = \
 	$(srcdir)/sources/Preface.xml \
 	$(srcdir)/sources/Revision_History.xml \
 	$(srcdir)/sources/Protocol.xml \
-	$(srcdir)/sources/Xwayland.xml \
 	$(srcdir)/sources/Compositors.xml \
 	$(srcdir)/sources/images/icon.svg  \
 	$(srcdir)/sources/images/wayland.png \
-	$(srcdir)/sources/images/xwayland-architecture.png \
 	$(srcdir)/sources/Client.xml \
 	$(srcdir)/sources/Server.xml
 
@@ -45,8 +43,7 @@ css_sources = \
 
 img_sources = \
 	$(srcdir)/sources/images/icon.svg \
-	$(srcdir)/sources/images/wayland.png \
-	$(srcdir)/sources/images/xwayland-architecture.png
+	$(srcdir)/sources/images/wayland.png
 
 doxygen_img_sources := \
 	$(doxydir)/xml/wayland-architecture.png \

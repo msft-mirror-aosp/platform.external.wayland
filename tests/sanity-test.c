@@ -35,7 +35,7 @@
 
 #include "test-compositor.h"
 
-extern int fd_leak_check_enabled;
+extern int leak_check_enabled;
 
 TEST(empty)
 {
@@ -53,13 +53,11 @@ FAIL_TEST(exit_failure)
 
 FAIL_TEST(fail_abort)
 {
-	test_disable_coredumps();
 	abort();
 }
 
 FAIL_TEST(fail_wl_abort)
 {
-	test_disable_coredumps();
 	wl_abort("Abort the program\n");
 }
 
@@ -70,30 +68,79 @@ FAIL_TEST(fail_kill)
 
 FAIL_TEST(fail_segv)
 {
-	char * volatile *null = 0;
-
-	test_disable_coredumps();
-	*null = "Goodbye, world";
+	* (char **) 0 = "Goodbye, world";
 }
 
 FAIL_TEST(sanity_assert)
 {
-	test_disable_coredumps();
 	/* must fail */
 	assert(0);
+}
+
+FAIL_TEST(sanity_malloc_direct)
+{
+	void *p;
+
+	assert(leak_check_enabled);
+
+	p = malloc(10);	/* memory leak */
+	assert(p);	/* assert that we got memory, also prevents
+			 * the malloc from getting optimized away. */
+	free(NULL);	/* NULL must not be counted */
+}
+
+TEST(disable_leak_checks)
+{
+	volatile void *mem;
+	assert(leak_check_enabled);
+	/* normally this should be on the beginning of the test.
+	 * Here we need to be sure, that the leak checks are
+	 * turned on */
+	DISABLE_LEAK_CHECKS;
+
+	mem = malloc(16);
+	assert(mem);
+}
+
+FAIL_TEST(sanity_malloc_indirect)
+{
+	struct wl_array array;
+
+	assert(leak_check_enabled);
+
+	wl_array_init(&array);
+
+	/* call into library that calls malloc */
+	wl_array_add(&array, 14);
+
+	/* not freeing array, must leak */
+}
+
+FAIL_TEST(tc_client_memory_leaks)
+{
+	struct display *d = display_create();
+	client_create_noarg(d, sanity_malloc_direct);
+	display_run(d);
+	display_destroy(d);
+}
+
+FAIL_TEST(tc_client_memory_leaks2)
+{
+	struct display *d = display_create();
+	client_create_noarg(d, sanity_malloc_indirect);
+	display_run(d);
+	display_destroy(d);
 }
 
 FAIL_TEST(sanity_fd_leak)
 {
 	int fd[2];
 
-	assert(fd_leak_check_enabled);
+	assert(leak_check_enabled);
 
 	/* leak 2 file descriptors */
 	if (pipe(fd) < 0)
 		exit(EXIT_SUCCESS); /* failed to fail */
-
-	test_disable_coredumps();
 }
 
 FAIL_TEST(sanity_fd_leak_exec)
@@ -105,7 +152,6 @@ FAIL_TEST(sanity_fd_leak_exec)
 	if (pipe(fd) < 0)
 		exit(EXIT_SUCCESS); /* failed to fail */
 
-	test_disable_coredumps();
 	exec_fd_leak_check(nr_fds);
 }
 
@@ -125,7 +171,7 @@ sanity_fd_no_leak(void)
 {
 	int fd[2];
 
-	assert(fd_leak_check_enabled);
+	assert(leak_check_enabled);
 
 	/* leak 2 file descriptors */
 	if (pipe(fd) < 0)
@@ -166,7 +212,6 @@ FAIL_TEST(tc_client_fd_leaks)
 	client_create_noarg(d, sanity_fd_leak);
 	display_run(d);
 
-	test_disable_coredumps();
 	display_destroy(d);
 }
 
@@ -177,14 +222,12 @@ FAIL_TEST(tc_client_fd_leaks_exec)
 	client_create_noarg(d, sanity_fd_leak);
 	display_run(d);
 
-	test_disable_coredumps();
 	display_destroy(d);
 }
 
 FAIL_TEST(timeout_tst)
 {
 	test_set_timeout(1);
-	test_disable_coredumps();
 	/* test should reach timeout */
 	test_sleep(2);
 }
@@ -204,7 +247,6 @@ FAIL_TEST(timeout_reset_tst)
 	test_set_timeout(10);
 	test_set_timeout(1);
 
-	test_disable_coredumps();
 	/* test should fail on timeout */
 	test_sleep(2);
 }
@@ -223,7 +265,6 @@ FAIL_TEST(tc_timeout_tst)
 	struct display *d = display_create();
 	client_create_noarg(d, timeout_tst);
 	display_run(d);
-	test_disable_coredumps();
 	display_destroy(d);
 }
 
@@ -232,7 +273,6 @@ FAIL_TEST(tc_timeout2_tst)
 	struct display *d = display_create();
 	client_create_noarg(d, timeout_reset_tst);
 	display_run(d);
-	test_disable_coredumps();
 	display_destroy(d);
 }
 

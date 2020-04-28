@@ -7,9 +7,8 @@ TAB_SIZE               = 8
 QUIET                  = YES
 HTML_TIMESTAMP         = YES
 GENERATE_LATEX         = NO
-MAN_LINKS              = NO
-PREDEFINED             = WL_EXPORT=              \
-                         WL_PRINTF(x,y)=
+MAN_LINKS              = YES
+PREDEFINED             = WL_EXPORT=
 MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = YES
 DOT_MULTI_TARGETS      = YES

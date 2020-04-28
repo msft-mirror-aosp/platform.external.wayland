@@ -84,17 +84,6 @@ destroy_notify(struct wl_listener *l, void *data)
 {
 	assert(l && data);
 	notify_called = 1;
-
-	/* In real code it's common to free the structure holding the
-	 * listener at this point, but not to remove it from the list.
-	 *
-	 * That's fine since this is a destruction notification and
-	 * it's the last time this signal can fire.  We set these
-	 * to NULL so we can check them later to ensure no write after
-	 * "free" occurred.
-	 */
-	l->link.prev = NULL;
-	l->link.next = NULL;
 }
 
 TEST(destroy_res_tst)
@@ -130,8 +119,6 @@ TEST(destroy_res_tst)
 	assert(destroyed);
 	assert(notify_called); /* check if signal was emitted */
 	assert(wl_client_get_object(client, id) == NULL);
-	assert(destroy_listener.link.prev == NULL);
-	assert(destroy_listener.link.next == NULL);
 
 	res = wl_resource_create(client, &wl_seat_interface, 2, 0);
 	assert(res);
@@ -144,8 +131,6 @@ TEST(destroy_res_tst)
 	wl_client_destroy(client);
 	assert(destroyed);
 	assert(notify_called);
-	assert(destroy_listener.link.prev == NULL);
-	assert(destroy_listener.link.next == NULL);
 
 	wl_display_destroy(display);
 	close(s[1]);
@@ -181,28 +166,4 @@ TEST(create_resource_with_same_id)
 	wl_client_destroy(client);
 	wl_display_destroy(display);
 	close(s[1]);
-}
-
-static void
-display_destroy_notify(struct wl_listener *l, void *data)
-{
-	l->link.prev = l->link.next = NULL;
-}
-
-TEST(free_without_remove)
-{
-	struct wl_display *display;
-	struct wl_listener a, b;
-
-	display = wl_display_create();
-	a.notify = display_destroy_notify;
-	b.notify = display_destroy_notify;
-
-	wl_display_add_destroy_listener(display, &a);
-	wl_display_add_destroy_listener(display, &b);
-
-	wl_display_destroy(display);
-
-	assert(a.link.next == a.link.prev && a.link.next == NULL);
-	assert(b.link.next == b.link.prev && b.link.next == NULL);
 }

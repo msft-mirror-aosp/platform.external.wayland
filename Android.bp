@@ -85,7 +85,6 @@ genrule {
 cc_library_static {
     name: "libwayland_client",
     vendor_available: true,
-    host_supported: true,
     defaults: ["wayland_defaults"],
     srcs: [
        "src/connection.c",
