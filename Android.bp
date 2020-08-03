@@ -63,10 +63,19 @@ cc_binary_host {
     generated_headers: ["wayland_version_header"],
 }
 
-// Generate protocol source files used by both client and server
+// Generate protocol source files used by both client and server (static)
 genrule {
-    name: "wayland_core_protocol_sources",
+    name: "wayland_core_protocol_sources_static",
     cmd: "$(location wayland_scanner) private-code < $(in) > $(out)",
+    srcs: [":wayland_core_protocol"],
+    out: ["wayland-protocol.c"],
+    tools: ["wayland_scanner"],
+}
+
+// Generate protocol source files used by both client and server (shared)
+genrule {
+    name: "wayland_core_protocol_sources_shared",
+    cmd: "$(location wayland_scanner) public-code < $(in) > $(out)",
     srcs: [":wayland_core_protocol"],
     out: ["wayland-protocol.c"],
     tools: ["wayland_scanner"],
@@ -91,10 +100,8 @@ genrule {
 }
 
 // Build wayland_client
-cc_library_static {
-    name: "libwayland_client",
-    vendor_available: true,
-    host_supported: true,
+cc_defaults {
+    name: "libwayland_client_defaults",
     defaults: ["wayland_defaults"],
     srcs: [
         "src/connection.c",
@@ -106,7 +113,6 @@ cc_library_static {
         "-Wall",
         "-Werror",
     ],
-    generated_sources: ["wayland_core_protocol_sources"],
     static_libs: ["libffi"],
     local_include_dirs: ["src"],
     generated_headers: [
@@ -118,6 +124,23 @@ cc_library_static {
         "wayland_version_header",
         "wayland_core_client_protocol_headers",
     ],
+}
+cc_library_static {
+    name: "libwayland_client_static",
+    vendor_available: true,
+    defaults: ["libwayland_client_defaults"],
+    generated_sources: ["wayland_core_protocol_sources_static"],
+}
+cc_library_host_shared {
+    name: "libwayland_client",
+    defaults: ["libwayland_client_defaults"],
+    generated_sources: ["wayland_core_protocol_sources_shared"],
+    target: {
+        linux_glibc_x86: {
+            // libffi broken on x86, see b/162610242
+            enabled: false,
+        },
+    },
 }
 
 // Build wayland_server
@@ -138,7 +161,7 @@ cc_library_static {
         "-Wall",
         "-Werror",
     ],
-    generated_sources: ["wayland_core_protocol_sources"],
+    generated_sources: ["wayland_core_protocol_sources_static"],
     static_libs: ["libffi"],
     local_include_dirs: ["src"],
     generated_headers: [
