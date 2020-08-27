@@ -2194,3 +2194,9 @@ wl_log_set_handler_client(wl_log_func_t handler)
 {
 	wl_log_handler = handler;
 }
+
+WL_EXPORT void
+wl_set_debug_client_flag(int value)
+{
+	debug_client = value;
+}
