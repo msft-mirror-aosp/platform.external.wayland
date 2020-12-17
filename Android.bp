@@ -130,6 +130,10 @@ cc_library_static {
     vendor_available: true,
     defaults: ["libwayland_client_defaults"],
     generated_sources: ["wayland_core_protocol_sources_static"],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.virt",
+    ],
 }
 cc_library_host_shared {
     name: "libwayland_client",
