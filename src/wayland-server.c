@@ -855,6 +855,28 @@ wl_resource_get_class(struct wl_resource *resource)
 	return resource->object.interface->name;
 }
 
+/** Safely converts an object into its corresponding resource
+ *
+ * \param object The object to convert
+ * \return A corresponding resource, or NULL on failure
+ *
+ * Safely converts an object into its corresponding resource.
+ *
+ * This is useful for implementing functions that are given a \c wl_argument
+ * array, and that need to do further introspection on the ".o" field, as it
+ * is otherwise an opaque type.
+ *
+ * \memberof wl_resource
+ */
+WL_EXPORT struct wl_resource *
+wl_resource_from_object(struct wl_object *object)
+{
+	struct wl_resource *resource;
+	if (object == NULL)
+		return NULL;
+	return wl_container_of(object, resource, object);
+}
+
 WL_EXPORT void
 wl_client_add_destroy_listener(struct wl_client *client,
 			       struct wl_listener *listener)
