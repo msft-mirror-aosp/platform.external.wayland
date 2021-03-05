@@ -24,10 +24,10 @@ just the ones that have listeners or dispatchers.
 Signed-off-by: Lloyd Pique <lpique@google.com>
 
 diff --git a/src/wayland-client-core.h b/src/wayland-client-core.h
-index 03e781b..9b1df7f 100644
+index 0cd96e0..547ae04 100644
 --- a/src/wayland-client-core.h
 +++ b/src/wayland-client-core.h
-@@ -260,6 +260,32 @@ wl_display_read_events(struct wl_display *display);
+@@ -267,6 +267,32 @@ wl_display_read_events(struct wl_display *display);
  void
  wl_log_set_handler_client(wl_log_func_t handler);
  
@@ -61,10 +61,10 @@ index 03e781b..9b1df7f 100644
  }
  #endif
 diff --git a/src/wayland-client.c b/src/wayland-client.c
-index b0805f1..eb1c299 100644
+index 21d4606..7f5a651 100644
 --- a/src/wayland-client.c
 +++ b/src/wayland-client.c
-@@ -106,12 +106,47 @@ struct wl_display {
+@@ -107,12 +107,47 @@ struct wl_display {
  	int reader_count;
  	uint32_t read_serial;
  	pthread_cond_t reader_cond;
@@ -112,17 +112,17 @@ index b0805f1..eb1c299 100644
  /**
   * This helper function wakes up all threads that are
   * waiting for display->reader_cond (i. e. when reading is done,
-@@ -743,8 +778,7 @@ wl_proxy_marshal_array_constructor_versioned(struct wl_proxy *proxy,
- 	if (closure == NULL)
- 		wl_abort("Error marshalling request: %s\n", strerror(errno));
+@@ -751,8 +786,7 @@ wl_proxy_marshal_array_constructor_versioned(struct wl_proxy *proxy,
+ 		goto err_unlock;
+ 	}
  
 -	if (debug_client)
 -		wl_closure_print(closure, &proxy->object, true);
 +	log_closure(closure, proxy, true);
  
- 	if (wl_closure_send(closure, proxy->display->connection))
- 		wl_abort("Error sending request: %s\n", strerror(errno));
-@@ -1046,6 +1080,7 @@ wl_display_connect_to_fd(int fd)
+ 	if (wl_closure_send(closure, proxy->display->connection)) {
+ 		wl_log("Error sending request: %s\n", strerror(errno));
+@@ -1056,6 +1090,7 @@ wl_display_connect_to_fd(int fd)
  	pthread_mutex_init(&display->mutex, NULL);
  	pthread_cond_init(&display->reader_cond, NULL);
  	display->reader_count = 0;
@@ -130,7 +130,7 @@ index b0805f1..eb1c299 100644
  
  	wl_map_insert_new(&display->objects, 0, NULL);
  
-@@ -1160,6 +1195,7 @@ wl_display_disconnect(struct wl_display *display)
+@@ -1177,6 +1212,7 @@ wl_display_disconnect(struct wl_display *display)
  	wl_map_release(&display->objects);
  	wl_event_queue_release(&display->default_queue);
  	wl_event_queue_release(&display->display_queue);
@@ -138,7 +138,7 @@ index b0805f1..eb1c299 100644
  	pthread_mutex_destroy(&display->mutex);
  	pthread_cond_destroy(&display->reader_cond);
  	close(display->fd);
-@@ -1417,16 +1453,12 @@ dispatch_event(struct wl_display *display, struct wl_event_queue *queue)
+@@ -1439,16 +1475,12 @@ dispatch_event(struct wl_display *display, struct wl_event_queue *queue)
  
  	pthread_mutex_unlock(&display->mutex);
  
@@ -157,7 +157,7 @@ index b0805f1..eb1c299 100644
  		wl_closure_invoke(closure, WL_CLOSURE_INVOKE_CLIENT,
  				  &proxy->object, opcode, proxy->user_data);
  	}
-@@ -2194,3 +2226,60 @@ wl_log_set_handler_client(wl_log_func_t handler)
+@@ -2280,3 +2312,60 @@ wl_log_set_handler_client(wl_log_func_t handler)
  {
  	wl_log_handler = handler;
  }
