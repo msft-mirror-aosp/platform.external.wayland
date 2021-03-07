@@ -22,10 +22,10 @@ make a change that would break that assumption.
 Signed-off-by: Lloyd Pique <lpique@google.com>
 
 diff --git a/src/wayland-client-core.h b/src/wayland-client-core.h
-index 9b1df7f..919ca3b 100644
+index 547ae04..94c25e3 100644
 --- a/src/wayland-client-core.h
 +++ b/src/wayland-client-core.h
-@@ -197,6 +197,9 @@ wl_proxy_get_class(struct wl_proxy *proxy);
+@@ -204,6 +204,9 @@ wl_proxy_get_class(struct wl_proxy *proxy);
  void
  wl_proxy_set_queue(struct wl_proxy *proxy, struct wl_event_queue *queue);
  
@@ -36,10 +36,10 @@ index 9b1df7f..919ca3b 100644
  wl_display_connect(const char *name);
  
 diff --git a/src/wayland-client.c b/src/wayland-client.c
-index eb1c299..2e0aa33 100644
+index 7f5a651..74d4861 100644
 --- a/src/wayland-client.c
 +++ b/src/wayland-client.c
-@@ -2221,6 +2221,28 @@ wl_proxy_wrapper_destroy(void *proxy_wrapper)
+@@ -2307,6 +2307,28 @@ wl_proxy_wrapper_destroy(void *proxy_wrapper)
  	free(wrapper);
  }
  
@@ -69,10 +69,10 @@ index eb1c299..2e0aa33 100644
  wl_log_set_handler_client(wl_log_func_t handler)
  {
 diff --git a/src/wayland-server-core.h b/src/wayland-server-core.h
-index 3e0272b..f824837 100644
+index 64d7169..e5f4e43 100644
 --- a/src/wayland-server-core.h
 +++ b/src/wayland-server-core.h
-@@ -581,6 +581,9 @@ struct wl_listener *
+@@ -587,6 +587,9 @@ struct wl_listener *
  wl_resource_get_destroy_listener(struct wl_resource *resource,
  				 wl_notify_func_t notify);
  
@@ -83,10 +83,10 @@ index 3e0272b..f824837 100644
  	for (resource = 0, resource = wl_resource_from_link((list)->next);	\
  	     wl_resource_get_link(resource) != (list);				\
 diff --git a/src/wayland-server.c b/src/wayland-server.c
-index 19f6a76..7b91cf3 100644
+index d83bdec..ca0d98d 100644
 --- a/src/wayland-server.c
 +++ b/src/wayland-server.c
-@@ -855,6 +855,28 @@ wl_resource_get_class(struct wl_resource *resource)
+@@ -858,6 +858,28 @@ wl_resource_get_class(struct wl_resource *resource)
  	return resource->object.interface->name;
  }
  
