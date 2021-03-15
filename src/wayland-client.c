@@ -69,6 +69,7 @@ struct wl_proxy {
 	void *user_data;
 	wl_dispatcher_func_t dispatcher;
 	uint32_t version;
+	const char * const *tag;
 };
 
 struct wl_event_queue {
@@ -333,8 +334,8 @@ wl_event_queue_release(struct wl_event_queue *queue)
 	struct wl_closure *closure;
 
 	while (!wl_list_empty(&queue->event_list)) {
-		closure = container_of(queue->event_list.next,
-				       struct wl_closure, link);
+		closure = wl_container_of(queue->event_list.next,
+					  closure, link);
 		wl_list_remove(&closure->link);
 		destroy_queued_closure(closure);
 	}
@@ -774,14 +775,23 @@ wl_proxy_marshal_array_constructor_versioned(struct wl_proxy *proxy,
 			goto err_unlock;
 	}
 
+	if (proxy->display->last_error) {
+		goto err_unlock;
+	}
+
 	closure = wl_closure_marshal(&proxy->object, opcode, args, message);
-	if (closure == NULL)
-		wl_abort("Error marshalling request: %s\n", strerror(errno));
+	if (closure == NULL) {
+		wl_log("Error marshalling request: %s\n", strerror(errno));
+		display_fatal_error(proxy->display, errno);
+		goto err_unlock;
+	}
 
 	log_closure(closure, proxy, true);
 
-	if (wl_closure_send(closure, proxy->display->connection))
-		wl_abort("Error sending request: %s\n", strerror(errno));
+	if (wl_closure_send(closure, proxy->display->connection)) {
+		wl_log("Error sending request: %s\n", strerror(errno));
+		display_fatal_error(proxy->display, errno);
+	}
 
 	wl_closure_destroy(closure);
 
@@ -1138,6 +1148,13 @@ wl_display_connect_to_fd(int fd)
  * its value will be replaced with the WAYLAND_DISPLAY environment
  * variable if it is set, otherwise display "wayland-0" will be used.
  *
+ * If WAYLAND_SOCKET is set, it's interpreted as a file descriptor number
+ * referring to an already opened socket. In this case, the socket is used
+ * as-is and \c name is ignored.
+ *
+ * If \c name is a relative path, then the socket is opened relative to
+ * the XDG_RUNTIME_DIR directory.
+ *
  * If \c name is an absolute path, then that path is used as-is for
  * the location of the socket at which the Wayland server is listening;
  * no qualification inside XDG_RUNTIME_DIR is attempted.
@@ -1399,6 +1416,12 @@ queue_event(struct wl_display *display, int len)
 		return size;
 	}
 
+	if (opcode >= proxy->object.interface->event_count) {
+		wl_log("interface '%s' has no event %u\n",
+		       proxy->object.interface->name, opcode);
+		return -1;
+	}
+
 	message = &proxy->object.interface->events[opcode];
 	closure = wl_connection_demarshal(display->connection, size,
 					  &display->objects, message);
@@ -1436,8 +1459,7 @@ dispatch_event(struct wl_display *display, struct wl_event_queue *queue)
 	int opcode;
 	bool proxy_destroyed;
 
-	closure = container_of(queue->event_list.next,
-			       struct wl_closure, link);
+	closure = wl_container_of(queue->event_list.next, closure, link);
 	wl_list_remove(&closure->link);
 	opcode = closure->opcode;
 
@@ -2090,6 +2112,70 @@ WL_EXPORT uint32_t
 wl_proxy_get_id(struct wl_proxy *proxy)
 {
 	return proxy->object.id;
+}
+
+/** Set the tag of a proxy object
+ *
+ * A toolkit or application can set a unique tag on a proxy in order to
+ * identify whether an object is managed by itself or some external part.
+ *
+ * To create a tag, the recommended way is to define a statically allocated
+ * constant char array containing some descriptive string. The tag will be the
+ * pointer to the non-const pointer to the beginning of the array.
+ *
+ * For example, to define and set a tag on a surface managed by a certain
+ * subsystem:
+ *
+ * 	static const char *my_tag = "my tag";
+ *
+ * 	wl_proxy_set_tag((struct wl_proxy *) surface, &my_tag);
+ *
+ * Then, in a callback with wl_surface as an argument, in order to check
+ * whether it's a surface managed by the same subsystem.
+ *
+ * 	const char * const *tag;
+ *
+ * 	tag = wl_proxy_get_tag((struct wl_proxy *) surface);
+ * 	if (tag != &my_tag)
+ *		return;
+ *
+ *	...
+ *
+ * For debugging purposes, a tag should be suitable to be included in a debug
+ * log entry, e.g.
+ *
+ * 	const char * const *tag;
+ *
+ * 	tag = wl_proxy_get_tag((struct wl_proxy *) surface);
+ * 	printf("Got a surface with the tag %p (%s)\n",
+ * 	       tag, (tag && *tag) ? *tag : "");
+ *
+ * \param proxy The proxy object
+ * \param tag The tag
+ *
+ * \memberof wl_proxy
+ * \since 1.17.90
+ */
+WL_EXPORT void
+wl_proxy_set_tag(struct wl_proxy *proxy,
+		 const char * const *tag)
+{
+	proxy->tag = tag;
+}
+
+/** Get the tag of a proxy object
+ *
+ * See wl_proxy_set_tag for details.
+ *
+ * \param proxy The proxy object
+ *
+ * \memberof wl_proxy
+ * \since 1.17.90
+ */
+WL_EXPORT const char * const *
+wl_proxy_get_tag(struct wl_proxy *proxy)
+{
+	return proxy->tag;
 }
 
 /** Get the interface name (class) of a proxy object
