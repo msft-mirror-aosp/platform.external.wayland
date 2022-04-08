@@ -87,7 +87,8 @@ TEST(array_add)
 
 	/* verify the data */
 	for (i = 0; i < iterations; ++i) {
-		struct mydata* check = (struct mydata*)array.data + i;
+		const int index = datasize * i;
+		struct mydata* check = (struct mydata*)(array.data + index);
 
 		assert(check->a == i * 3);
 		assert(check->b == 20000 - i);
@@ -120,8 +121,9 @@ TEST(array_copy)
 
 	/* check the copy */
 	for (i = 0; i < iterations; i++) {
-		int *s = (int *)source.data + i;
-		int *c = (int *)copy.data + i;
+		const int index = sizeof(int) * i;
+		int *s = (int *)(source.data + index);
+		int *c = (int *)(copy.data + index);
 
 		assert(*s == *c); /* verify the values are the same */
 		assert(s != c); /* ensure the addresses aren't the same */

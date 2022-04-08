@@ -338,8 +338,7 @@ int main(int argc, char *argv[])
 
 		if (waitid(P_PID, pid, &info, WEXITED)) {
 			stderr_set_color(RED);
-			fprintf(stderr, "waitid failed: %s\n",
-				strerror(errno));
+			fprintf(stderr, "waitid failed: %m\n");
 			stderr_reset_color();
 
 			abort();

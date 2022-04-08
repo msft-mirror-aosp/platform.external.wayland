@@ -24,7 +24,6 @@ pkgconfig_DATA =
 
 bin_PROGRAMS = wayland-scanner
 wayland_scanner_SOURCES = src/scanner.c
-wayland_scanner_CPPFLAGS = $(AM_CPPFLAGS) -include config.h
 wayland_scanner_CFLAGS = $(EXPAT_CFLAGS) $(LIBXML_CFLAGS) $(AM_CFLAGS)
 wayland_scanner_LDADD = $(EXPAT_LIBS) $(LIBXML_LIBS) libwayland-util.la
 pkgconfig_DATA += src/wayland-scanner.pc
@@ -57,8 +56,7 @@ libwayland_private_la_SOURCES =			\
 	src/connection.c			\
 	src/wayland-os.c			\
 	src/wayland-os.h			\
-	src/wayland-private.h			\
-	src/wayland-server-private.h
+	src/wayland-private.h
 
 include_HEADERS =				\
 	src/wayland-util.h			\
@@ -73,7 +71,7 @@ nodist_include_HEADERS =			\
 	protocol/wayland-client-protocol.h
 
 libwayland_server_la_CFLAGS = $(FFI_CFLAGS) $(AM_CFLAGS) -pthread
-libwayland_server_la_LIBADD = $(FFI_LIBS) libwayland-private.la libwayland-util.la $(RT_LIBS) -lm
+libwayland_server_la_LIBADD = $(FFI_LIBS) libwayland-private.la libwayland-util.la -lrt -lm
 libwayland_server_la_LDFLAGS = -version-info 1:0:1
 libwayland_server_la_SOURCES =			\
 	src/wayland-server.c			\
@@ -85,7 +83,7 @@ nodist_libwayland_server_la_SOURCES =		\
 	protocol/wayland-protocol.c
 
 libwayland_client_la_CFLAGS = $(FFI_CFLAGS) $(AM_CFLAGS) -pthread
-libwayland_client_la_LIBADD = $(FFI_LIBS) libwayland-private.la libwayland-util.la $(RT_LIBS) -lm
+libwayland_client_la_LIBADD = $(FFI_LIBS) libwayland-private.la libwayland-util.la -lrt -lm
 libwayland_client_la_LDFLAGS = -version-info 3:0:3
 libwayland_client_la_SOURCES =			\
 	src/wayland-client.c
@@ -98,22 +96,22 @@ pkgconfig_DATA += src/wayland-client.pc src/wayland-server.pc
 
 protocol/%-protocol.c : $(top_srcdir)/protocol/%.xml
 if USE_HOST_SCANNER
-	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) -s code $< $@
+	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) code $< $@
 else
-	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) -s public-code $< $@
+	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) public-code $< $@
 endif
 
 protocol/%-server-protocol.h : $(top_srcdir)/protocol/%.xml
-	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) -s server-header $< $@
+	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) server-header $< $@
 
 protocol/%-client-protocol.h : $(top_srcdir)/protocol/%.xml
-	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) -s client-header $< $@
+	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) client-header $< $@
 
 protocol/%-server-protocol-core.h : $(top_srcdir)/protocol/%.xml
-	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) -s server-header -c < $< > $@
+	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) server-header -c < $< > $@
 
 protocol/%-client-protocol-core.h : $(top_srcdir)/protocol/%.xml
-	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) -s client-header -c < $< > $@
+	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && $(wayland_scanner) client-header -c < $< > $@
 
 BUILT_SOURCES =					\
 	$(nodist_libwayland_server_la_SOURCES)	\
@@ -176,7 +174,6 @@ built_test_programs =				\
 	sanity-test				\
 	socket-test				\
 	queue-test				\
-	proxy-test				\
 	signal-test				\
 	newsignal-test				\
 	resources-test				\
@@ -230,13 +227,12 @@ libtest_runner_la_LIBADD =			\
 	libwayland-client.la			\
 	libwayland-server.la			\
 	libtest-helpers.la			\
-	$(RT_LIBS) $(DL_LIBS) $(FFI_LIBS)
+	-lrt -ldl $(FFI_LIBS)
 
 array_test_SOURCES = tests/array-test.c
 array_test_LDADD = libtest-runner.la
 client_test_SOURCES = tests/client-test.c
 client_test_LDADD = libtest-runner.la
-display_test_CFLAGS = -pthread
 display_test_SOURCES = tests/display-test.c
 display_test_LDADD = libtest-runner.la
 nodist_display_test_SOURCES =				\
@@ -261,8 +257,6 @@ socket_test_SOURCES = tests/socket-test.c
 socket_test_LDADD = libtest-runner.la
 queue_test_SOURCES = tests/queue-test.c
 queue_test_LDADD = libtest-runner.la
-proxy_test_SOURCES = tests/proxy-test.c
-proxy_test_LDADD = libtest-runner.la
 signal_test_SOURCES = tests/signal-test.c
 signal_test_LDADD = libtest-runner.la
 # wayland-server.c is needed here to access wl_priv_* functions
@@ -288,7 +282,6 @@ cpp_compile_test_SOURCES = tests/cpp-compile-test.cpp
 endif
 
 fixed_benchmark_SOURCES = tests/fixed-benchmark.c
-fixed_benchmark_LDADD = $(RT_LIBS)
 
 os_wrappers_test_SOURCES = tests/os-wrappers-test.c
 os_wrappers_test_LDADD = libtest-runner.la
@@ -298,13 +291,6 @@ exec_fd_leak_checker_LDADD = libtest-helpers.la
 
 EXTRA_DIST += tests/scanner-test.sh			\
 	protocol/tests.xml				\
-	tests/data/bad-identifier-arg.xml		\
-	tests/data/bad-identifier-entry.xml		\
-	tests/data/bad-identifier-enum.xml		\
-	tests/data/bad-identifier-event.xml		\
-	tests/data/bad-identifier-interface.xml		\
-	tests/data/bad-identifier-protocol.xml		\
-	tests/data/bad-identifier-request.xml		\
 	tests/data/example.xml				\
 	tests/data/example-client.h			\
 	tests/data/example-server.h			\
@@ -316,22 +302,7 @@ EXTRA_DIST += tests/scanner-test.sh			\
 	tests/data/small-code-core.c			\
 	tests/data/small-client-core.h			\
 	tests/data/small-server-core.h			\
-	tests/data/small-private-code.c			\
-	meson.build					\
-	meson_options.txt				\
-	cursor/meson.build				\
-	doc/meson.build					\
-	doc/doxygen/mainpage.dox			\
-	doc/doxygen/meson.build				\
-	doc/doxygen/gen-doxygen.py			\
-	doc/doxygen/xml/meson.build			\
-	doc/doxygen/xml/Client/meson.build		\
-	doc/doxygen/xml/Server/meson.build		\
-	doc/publican/meson.build			\
-	doc/publican/sources/meson.build		\
-	egl/meson.build					\
-	src/meson.build					\
-	tests/meson.build
+	tests/data/small-private-code.c
 
 tests/scanner-test.sh: $(top_builddir)/wayland-scanner
 

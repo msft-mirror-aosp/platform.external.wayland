@@ -1,1 +1,1 @@
-SUBDIRS = doxygen publican
+SUBDIRS = doxygen publican man
