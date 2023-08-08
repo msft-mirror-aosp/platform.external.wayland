@@ -233,7 +233,7 @@ index 9274f1b..66fc78f 100644
  void
  wl_closure_destroy(struct wl_closure *closure);
 diff --git a/src/wayland-server.c b/src/wayland-server.c
-index 2edf621..09e5995 100644
+index d51acc6..be98f7d 100644
 --- a/src/wayland-server.c
 +++ b/src/wayland-server.c
 @@ -157,7 +157,7 @@ log_closure(struct wl_resource *resource,
