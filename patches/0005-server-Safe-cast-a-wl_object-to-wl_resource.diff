@@ -33,7 +33,7 @@ index df95821..63c6a62 100644
  	for (resource = 0, resource = wl_resource_from_link((list)->next);	\
  	     wl_resource_get_link(resource) != (list);				\
 diff --git a/src/wayland-server.c b/src/wayland-server.c
-index 09e5995..4bcca58 100644
+index be98f7d..468322d 100644
 --- a/src/wayland-server.c
 +++ b/src/wayland-server.c
 @@ -866,6 +866,28 @@ wl_resource_get_class(struct wl_resource *resource)
