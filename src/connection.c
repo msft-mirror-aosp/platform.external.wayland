@@ -54,7 +54,7 @@ div_roundup(uint32_t n, size_t a)
 	return (uint32_t) (((uint64_t) n + (a - 1)) / a);
 }
 
-struct wl_buffer {
+struct wl_ring_buffer {
 	char data[4096];
 	uint32_t head, tail;
 };
@@ -65,14 +65,14 @@ struct wl_buffer {
 #define CLEN		(CMSG_LEN(MAX_FDS_OUT * sizeof(int32_t)))
 
 struct wl_connection {
-	struct wl_buffer in, out;
-	struct wl_buffer fds_in, fds_out;
+	struct wl_ring_buffer in, out;
+	struct wl_ring_buffer fds_in, fds_out;
 	int fd;
 	int want_flush;
 };
 
 static int
-wl_buffer_put(struct wl_buffer *b, const void *data, size_t count)
+ring_buffer_put(struct wl_ring_buffer *b, const void *data, size_t count)
 {
 	uint32_t head, size;
 
@@ -98,7 +98,7 @@ wl_buffer_put(struct wl_buffer *b, const void *data, size_t count)
 }
 
 static void
-wl_buffer_put_iov(struct wl_buffer *b, struct iovec *iov, int *count)
+ring_buffer_put_iov(struct wl_ring_buffer *b, struct iovec *iov, int *count)
 {
 	uint32_t head, tail;
 
@@ -122,7 +122,7 @@ wl_buffer_put_iov(struct wl_buffer *b, struct iovec *iov, int *count)
 }
 
 static void
-wl_buffer_get_iov(struct wl_buffer *b, struct iovec *iov, int *count)
+ring_buffer_get_iov(struct wl_ring_buffer *b, struct iovec *iov, int *count)
 {
 	uint32_t head, tail;
 
@@ -146,7 +146,7 @@ wl_buffer_get_iov(struct wl_buffer *b, struct iovec *iov, int *count)
 }
 
 static void
-wl_buffer_copy(struct wl_buffer *b, void *data, size_t count)
+ring_buffer_copy(struct wl_ring_buffer *b, void *data, size_t count)
 {
 	uint32_t tail, size;
 
@@ -161,7 +161,7 @@ wl_buffer_copy(struct wl_buffer *b, void *data, size_t count)
 }
 
 static uint32_t
-wl_buffer_size(struct wl_buffer *b)
+ring_buffer_size(struct wl_ring_buffer *b)
 {
 	return b->head - b->tail;
 }
@@ -181,16 +181,16 @@ wl_connection_create(int fd)
 }
 
 static void
-close_fds(struct wl_buffer *buffer, int max)
+close_fds(struct wl_ring_buffer *buffer, int max)
 {
 	int32_t fds[sizeof(buffer->data) / sizeof(int32_t)], i, count;
 	size_t size;
 
-	size = wl_buffer_size(buffer);
+	size = ring_buffer_size(buffer);
 	if (size == 0)
 		return;
 
-	wl_buffer_copy(buffer, fds, size);
+	ring_buffer_copy(buffer, fds, size);
 	count = size / sizeof fds[0];
 	if (max > 0 && max < count)
 		count = max;
@@ -221,7 +221,7 @@ wl_connection_destroy(struct wl_connection *connection)
 void
 wl_connection_copy(struct wl_connection *connection, void *data, size_t size)
 {
-	wl_buffer_copy(&connection->in, data, size);
+	ring_buffer_copy(&connection->in, data, size);
 }
 
 void
@@ -231,12 +231,12 @@ wl_connection_consume(struct wl_connection *connection, size_t size)
 }
 
 static void
-build_cmsg(struct wl_buffer *buffer, char *data, int *clen)
+build_cmsg(struct wl_ring_buffer *buffer, char *data, size_t *clen)
 {
 	struct cmsghdr *cmsg;
 	size_t size;
 
-	size = wl_buffer_size(buffer);
+	size = ring_buffer_size(buffer);
 	if (size > MAX_FDS_OUT * sizeof(int32_t))
 		size = MAX_FDS_OUT * sizeof(int32_t);
 
@@ -245,7 +245,7 @@ build_cmsg(struct wl_buffer *buffer, char *data, int *clen)
 		cmsg->cmsg_level = SOL_SOCKET;
 		cmsg->cmsg_type = SCM_RIGHTS;
 		cmsg->cmsg_len = CMSG_LEN(size);
-		wl_buffer_copy(buffer, CMSG_DATA(cmsg), size);
+		ring_buffer_copy(buffer, CMSG_DATA(cmsg), size);
 		*clen = cmsg->cmsg_len;
 	} else {
 		*clen = 0;
@@ -253,7 +253,7 @@ build_cmsg(struct wl_buffer *buffer, char *data, int *clen)
 }
 
 static int
-decode_cmsg(struct wl_buffer *buffer, struct msghdr *msg)
+decode_cmsg(struct wl_ring_buffer *buffer, struct msghdr *msg)
 {
 	struct cmsghdr *cmsg;
 	size_t size, max, i;
@@ -266,13 +266,13 @@ decode_cmsg(struct wl_buffer *buffer, struct msghdr *msg)
 			continue;
 
 		size = cmsg->cmsg_len - CMSG_LEN(0);
-		max = sizeof(buffer->data) - wl_buffer_size(buffer);
+		max = sizeof(buffer->data) - ring_buffer_size(buffer);
 		if (size > max || overflow) {
 			overflow = 1;
 			size /= sizeof(int32_t);
 			for (i = 0; i < size; i++)
 				close(((int*)CMSG_DATA(cmsg))[i]);
-		} else if (wl_buffer_put(buffer, CMSG_DATA(cmsg), size) < 0) {
+		} else if (ring_buffer_put(buffer, CMSG_DATA(cmsg), size) < 0) {
 				return -1;
 		}
 	}
@@ -289,9 +289,10 @@ int
 wl_connection_flush(struct wl_connection *connection)
 {
 	struct iovec iov[2];
-	struct msghdr msg;
+	struct msghdr msg = {0};
 	char cmsg[CLEN];
-	int len = 0, count, clen;
+	int len = 0, count;
+	size_t clen;
 	uint32_t tail;
 
 	if (!connection->want_flush)
@@ -299,17 +300,14 @@ wl_connection_flush(struct wl_connection *connection)
 
 	tail = connection->out.tail;
 	while (connection->out.head - connection->out.tail > 0) {
-		wl_buffer_get_iov(&connection->out, iov, &count);
+		ring_buffer_get_iov(&connection->out, iov, &count);
 
 		build_cmsg(&connection->fds_out, cmsg, &clen);
 
-		msg.msg_name = NULL;
-		msg.msg_namelen = 0;
 		msg.msg_iov = iov;
 		msg.msg_iovlen = count;
 		msg.msg_control = (clen > 0) ? cmsg : NULL;
 		msg.msg_controllen = clen;
-		msg.msg_flags = 0;
 
 		do {
 			len = sendmsg(connection->fd, &msg,
@@ -332,7 +330,7 @@ wl_connection_flush(struct wl_connection *connection)
 uint32_t
 wl_connection_pending_input(struct wl_connection *connection)
 {
-	return wl_buffer_size(&connection->in);
+	return ring_buffer_size(&connection->in);
 }
 
 int
@@ -343,12 +341,12 @@ wl_connection_read(struct wl_connection *connection)
 	char cmsg[CLEN];
 	int len, count, ret;
 
-	if (wl_buffer_size(&connection->in) >= sizeof(connection->in.data)) {
+	if (ring_buffer_size(&connection->in) >= sizeof(connection->in.data)) {
 		errno = EOVERFLOW;
 		return -1;
 	}
 
-	wl_buffer_put_iov(&connection->in, iov, &count);
+	ring_buffer_put_iov(&connection->in, iov, &count);
 
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
@@ -385,7 +383,7 @@ wl_connection_write(struct wl_connection *connection,
 			return -1;
 	}
 
-	if (wl_buffer_put(&connection->out, data, count) < 0)
+	if (ring_buffer_put(&connection->out, data, count) < 0)
 		return -1;
 
 	connection->want_flush = 1;
@@ -404,7 +402,7 @@ wl_connection_queue(struct wl_connection *connection,
 			return -1;
 	}
 
-	return wl_buffer_put(&connection->out, data, count);
+	return ring_buffer_put(&connection->out, data, count);
 }
 
 int
@@ -429,13 +427,13 @@ wl_connection_get_fd(struct wl_connection *connection)
 static int
 wl_connection_put_fd(struct wl_connection *connection, int32_t fd)
 {
-	if (wl_buffer_size(&connection->fds_out) == MAX_FDS_OUT * sizeof fd) {
+	if (ring_buffer_size(&connection->fds_out) == MAX_FDS_OUT * sizeof fd) {
 		connection->want_flush = 1;
 		if (wl_connection_flush(connection) < 0)
 			return -1;
 	}
 
-	return wl_buffer_put(&connection->fds_out, &fd, sizeof fd);
+	return ring_buffer_put(&connection->fds_out, &fd, sizeof fd);
 }
 
 const char *
@@ -568,10 +566,10 @@ wl_closure_init(const struct wl_message *message, uint32_t size,
 
 	if (size) {
 		*num_arrays = wl_message_count_arrays(message);
-		closure = malloc(sizeof *closure + size +
+		closure = zalloc(sizeof *closure + size +
 				 *num_arrays * sizeof(struct wl_array));
 	} else {
-		closure = malloc(sizeof *closure);
+		closure = zalloc(sizeof *closure);
 	}
 
 	if (!closure) {
@@ -632,13 +630,13 @@ wl_closure_marshal(struct wl_object *sender, uint32_t opcode,
 			break;
 		case 'n':
 			object = args[i].o;
-			if (!arg.nullable && object == NULL)
+			if (object == NULL)
 				goto err_null;
 
 			closure->args[i].n = object ? object->id : 0;
 			break;
 		case 'a':
-			if (!arg.nullable && args[i].a == NULL)
+			if (args[i].a == NULL)
 				goto err_null;
 			break;
 		case 'h':
@@ -749,6 +747,13 @@ wl_connection_demarshal(struct wl_connection *connection,
 		case 's':
 			length = *p++;
 
+			if (length == 0 && !arg.nullable) {
+				wl_log("NULL string received on non-nullable "
+				       "type, message %s(%s)\n", message->name,
+				       message->signature);
+				errno = EINVAL;
+				goto err;
+			}
 			if (length == 0) {
 				closure->args[i].s = NULL;
 				break;
@@ -794,7 +799,7 @@ wl_connection_demarshal(struct wl_connection *connection,
 			id = *p++;
 			closure->args[i].n = id;
 
-			if (id == 0 && !arg.nullable) {
+			if (id == 0) {
 				wl_log("NULL new ID received on non-nullable "
 				       "type, message %s(%s)\n", message->name,
 				       message->signature);
@@ -803,10 +808,12 @@ wl_connection_demarshal(struct wl_connection *connection,
 			}
 
 			if (wl_map_reserve_new(objects, id) < 0) {
-				wl_log("not a valid new object id (%u), "
-				       "message %s(%s)\n",
-				       id, message->name, message->signature);
-				errno = EINVAL;
+				if (errno == EINVAL) {
+					wl_log("not a valid new object id (%u), "
+					       "message %s(%s)\n", id,
+					       message->name,
+					       message->signature);
+				}
 				goto err;
 			}
 
@@ -842,7 +849,7 @@ wl_connection_demarshal(struct wl_connection *connection,
 				goto err;
 			}
 
-			wl_buffer_copy(&connection->fds_in, &fd, sizeof fd);
+			ring_buffer_copy(&connection->fds_in, &fd, sizeof fd);
 			connection->fds_in.tail += sizeof fd;
 			closure->args[i].h = fd;
 			break;
@@ -1049,7 +1056,7 @@ copy_fds_to_connection(struct wl_closure *closure,
 		fd = closure->args[i].h;
 		if (wl_connection_put_fd(connection, fd)) {
 			wl_log("request could not be marshaled: "
-			       "can't send file descriptor");
+			       "can't send file descriptor\n");
 			return -1;
 		}
 		closure->args[i].h = -1;
@@ -1256,19 +1263,31 @@ wl_closure_queue(struct wl_closure *closure, struct wl_connection *connection)
 }
 
 void
-wl_closure_print(struct wl_closure *closure, struct wl_object *target, int send)
+wl_closure_print(struct wl_closure *closure, struct wl_object *target,
+		 bool send, const char *discarded_reason)
 {
 	int i;
 	struct argument_details arg;
 	const char *signature = closure->message->signature;
 	struct timespec tp;
 	unsigned int time;
+	uint32_t nval;
+	FILE *f;
+	char *buffer;
+	size_t buffer_length;
+
+	f = open_memstream(&buffer, &buffer_length);
+	if (f == NULL)
+		return;
 
 	clock_gettime(CLOCK_REALTIME, &tp);
 	time = (tp.tv_sec * 1000000L) + (tp.tv_nsec / 1000);
 
-	fprintf(stderr, "[%10.3f] %s%s@%u.%s(",
-		time / 1000.0,
+	fprintf(f, "[%7u.%03u] %s%s%s%s%s@%u.%s(",
+		time / 1000, time % 1000,
+		(discarded_reason != NULL) ? "discarded[" : "",
+		(discarded_reason != NULL) ? discarded_reason : "",
+		(discarded_reason != NULL) ? "] " : "",
 		send ? " -> " : "",
 		target->interface->name, target->id,
 		closure->message->name);
@@ -1276,53 +1295,69 @@ wl_closure_print(struct wl_closure *closure, struct wl_object *target, int send)
 	for (i = 0; i < closure->count; i++) {
 		signature = get_next_argument(signature, &arg);
 		if (i > 0)
-			fprintf(stderr, ", ");
+			fprintf(f, ", ");
 
 		switch (arg.type) {
 		case 'u':
-			fprintf(stderr, "%u", closure->args[i].u);
+			fprintf(f, "%u", closure->args[i].u);
 			break;
 		case 'i':
-			fprintf(stderr, "%d", closure->args[i].i);
+			fprintf(f, "%d", closure->args[i].i);
 			break;
 		case 'f':
-			fprintf(stderr, "%f",
-				wl_fixed_to_double(closure->args[i].f));
+			/* The magic number 390625 is 1e8 / 256 */
+			if (closure->args[i].f >= 0) {
+				fprintf(f, "%d.%08d",
+					closure->args[i].f / 256,
+					390625 * (closure->args[i].f % 256));
+			} else {
+
+				fprintf(f, "-%d.%08d",
+					closure->args[i].f / -256,
+					-390625 * (closure->args[i].f % 256));
+			}
 			break;
 		case 's':
 			if (closure->args[i].s)
-				fprintf(stderr, "\"%s\"", closure->args[i].s);
+				fprintf(f, "\"%s\"", closure->args[i].s);
 			else
-				fprintf(stderr, "nil");
+				fprintf(f, "nil");
 			break;
 		case 'o':
 			if (closure->args[i].o)
-				fprintf(stderr, "%s@%u",
+				fprintf(f, "%s@%u",
 					closure->args[i].o->interface->name,
 					closure->args[i].o->id);
 			else
-				fprintf(stderr, "nil");
+				fprintf(f, "nil");
 			break;
 		case 'n':
-			fprintf(stderr, "new id %s@",
+			nval = closure->args[i].n;
+
+			fprintf(f, "new id %s@",
 				(closure->message->types[i]) ?
 				 closure->message->types[i]->name :
 				  "[unknown]");
-			if (closure->args[i].n != 0)
-				fprintf(stderr, "%u", closure->args[i].n);
+			if (nval != 0)
+				fprintf(f, "%u", nval);
 			else
-				fprintf(stderr, "nil");
+				fprintf(f, "nil");
 			break;
 		case 'a':
-			fprintf(stderr, "array");
+			fprintf(f, "array[%zu]", closure->args[i].a->size);
 			break;
 		case 'h':
-			fprintf(stderr, "fd %d", closure->args[i].h);
+			fprintf(f, "fd %d", closure->args[i].h);
 			break;
 		}
 	}
 
-	fprintf(stderr, ")\n");
+	fprintf(f, ")\n");
+
+	if (fclose(f) == 0) {
+		fprintf(stderr, "%s", buffer);
+		free(buffer);
+	}
 }
 
 static int
