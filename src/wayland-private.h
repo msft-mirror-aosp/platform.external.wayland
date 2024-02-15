@@ -45,6 +45,7 @@
 #define WL_MAP_SERVER_SIDE 0
 #define WL_MAP_CLIENT_SIDE 1
 #define WL_SERVER_ID_START 0xff000000
+#define WL_MAP_MAX_OBJECTS 0x00f00000
 #define WL_CLOSURE_MAX_ARGS 20
 
 struct wl_object {
@@ -210,8 +211,8 @@ int
 wl_closure_queue(struct wl_closure *closure, struct wl_connection *connection);
 
 void
-wl_closure_print(struct wl_closure *closure,
-		 struct wl_object *target, int send);
+wl_closure_print(struct wl_closure *closure, struct wl_object *target,
+		 bool send, const char *discarded_reason);
 
 void
 wl_closure_destroy(struct wl_closure *closure);
