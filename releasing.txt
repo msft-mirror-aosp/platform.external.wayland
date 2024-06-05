@@ -3,41 +3,25 @@ To make a release of Wayland, follow these steps.
   0.  Verify the test suites and codebase checks pass.  All of the
       tests should either pass or skip.
 
-      $ make check
+      $ ninja -C build/ test
 
-  1.  Update the first stanza of configure.ac to the intended version.
+  1.  Update the first stanza of meson.build to the intended version.
 
       Then commit your changes:
 
       $ export RELEASE_NUMBER="x.y.z"
       $ export RELEASE_NAME="[alpha|beta|RC1|RC2|official|point]"
       $ git status
-      $ git commit configure.ac -m "configure.ac: bump to version $RELEASE_NUMBER for the $RELEASE_NAME release"
+      $ git commit meson.build -m "build: bump to version $RELEASE_NUMBER for the $RELEASE_NAME release"
       $ git push
 
   2.  Run the release.sh script to generate the tarballs, sign and
       upload them, and generate a release announcement template.
-      This script can be obtained from X.org's modular package:
 
-        http://cgit.freedesktop.org/xorg/util/modular/tree/release.sh
-
-      The script supports a --dry-run option to test it without actually
-      doing a release.  If the script fails on the distcheck step due to
-      a testsuite error that can't be fixed for some reason, you can
-      skip testsuite by specifying the --dist argument.  Pass --help to
-      see other supported options.
-
-      $ release.sh .
-
-      For Wayland official and point releases, also publish the publican
-      documentation to wayland.freedesktop.org:
-
-      $ ./publish-doc
-
-  3.  Compose the release announcements.  The script will generate
-      *.x.y.z.announce files with a list of changes and tags.  Prepend
-      it with a human-readable listing of the most notable changes.
-      For x.y.0 releases, indicate the schedule for the x.y+1.0
+  3.  Compose the release announcements.  The script will generate a
+      wayland-x.y.z-announce.eml file with a list of changes and tags.
+      Prepend it with a human-readable listing of the most notable
+      changes. For x.y.0 releases, indicate the schedule for the x.y+1.0
       release.
 
   4.  PGP sign the release announcements and send them to
@@ -69,9 +53,9 @@ development early).
     $ git branch x.y [sha]
     $ git push origin x.y
 
-The master branch's configure.ac version should always be (at least)
+The master branch's meson.build version should always be (at least)
 x.y.90, with x.y being the most recent stable branch.  The stable
-branch's configure.ac version is just whatever was most recently
+branch's meson.build version is just whatever was most recently
 released from that branch.
 
 For stable branches, we commit fixes to master first, then cherry-pick

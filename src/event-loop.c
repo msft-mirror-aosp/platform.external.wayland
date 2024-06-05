@@ -179,7 +179,7 @@ wl_event_loop_add_fd(struct wl_event_loop *loop,
 {
 	struct wl_event_source_fd *source;
 
-	source = malloc(sizeof *source);
+	source = zalloc(sizeof *source);
 	if (source == NULL)
 		return NULL;
 
@@ -340,7 +340,7 @@ wl_timer_heap_reserve(struct wl_timer_heap *timers)
 		new_space = timers->space >= 8 ? timers->space * 2 : 8;
 		n = realloc(timers->data, (size_t)new_space * sizeof(*n));
 		if (!n) {
-			wl_log("Allocation failure when expanding timer list");
+			wl_log("Allocation failure when expanding timer list\n");
 			return -1;
 		}
 		timers->data = n;
@@ -361,7 +361,7 @@ wl_timer_heap_unreserve(struct wl_timer_heap *timers)
 	if (timers->space >= 16 && timers->space >= 4 * timers->count) {
 		n = realloc(timers->data, (size_t)timers->space / 2 * sizeof(*n));
 		if (!n) {
-			wl_log("Reallocation failure when shrinking timer list");
+			wl_log("Reallocation failure when shrinking timer list\n");
 			return;
 		}
 		timers->data = n;
@@ -568,7 +568,7 @@ wl_event_loop_add_timer(struct wl_event_loop *loop,
 	if (wl_timer_heap_ensure_timerfd(&loop->timers) < 0)
 		return NULL;
 
-	source = malloc(sizeof *source);
+	source = zalloc(sizeof *source);
 	if (source == NULL)
 		return NULL;
 
@@ -718,7 +718,7 @@ wl_event_loop_add_signal(struct wl_event_loop *loop,
 	struct wl_event_source_signal *source;
 	sigset_t mask;
 
-	source = malloc(sizeof *source);
+	source = zalloc(sizeof *source);
 	if (source == NULL)
 		return NULL;
 
@@ -775,7 +775,7 @@ wl_event_loop_add_idle(struct wl_event_loop *loop,
 {
 	struct wl_event_source_idle *source;
 
-	source = malloc(sizeof *source);
+	source = zalloc(sizeof *source);
 	if (source == NULL)
 		return NULL;
 
@@ -885,7 +885,7 @@ wl_event_loop_create(void)
 {
 	struct wl_event_loop *loop;
 
-	loop = malloc(sizeof *loop);
+	loop = zalloc(sizeof *loop);
 	if (loop == NULL)
 		return NULL;
 
@@ -942,8 +942,8 @@ post_dispatch_check(struct wl_event_loop *loop)
 
 		dispatch_result = source->interface->dispatch(source, &ep);
 		if (dispatch_result < 0) {
-			wl_log("Source dispatch function returned negative value!");
-			wl_log("This would previously accidentally suppress a follow-up dispatch");
+			wl_log("Source dispatch function returned negative value!\n");
+			wl_log("This would previously accidentally suppress a follow-up dispatch\n");
 		}
 		needs_recheck |= dispatch_result != 0;
 	}
