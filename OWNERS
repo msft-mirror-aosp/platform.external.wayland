@@ -7,3 +7,6 @@ xutan@google.com #{LAST_RESORT_SUGGESTION}
 # Allow Soong team to make build changes
 per-file Android.bp = file:platform/build/soong:/OWNERS #{LAST_RESORT_SUGGESTION}
 include platform/system/core:/janitors/OWNERS #{LAST_RESORT_SUGGESTION}
+
+per-file BUILD.bazel = file:aemu-bazel/OWNERS
+per-file README.aemu.md = file:aemu-bazel/OWNERS
