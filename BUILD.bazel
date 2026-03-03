@@ -92,6 +92,7 @@ cc_binary(
     name = "wayland-server",
     srcs = [
         "config.h",
+        "egl/wayland-egl-backend.h",
         "src/event-loop.c",
         "src/wayland-protocol.c",
         "src/wayland-server.c",
@@ -111,6 +112,7 @@ cc_binary(
     ],
     includes = [
         ".",
+        "egl",
         "platform/linux-x86_64",
         "src",
     ],
